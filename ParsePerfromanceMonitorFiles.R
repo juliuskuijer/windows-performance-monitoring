@@ -10,17 +10,13 @@
 library(plyr)
 library(reshape2)
 library(gridExtra)
+library(grid)
 library(ggplot2)
 
-
-library(tidyr)
-library(stringr)
-library(scales) 
-library(grid)
-
 # Set dir variable 
-indir<-'C:\\Perfmon\\input'
-outdir<-'C:\\Perfmon\\output'
+indir<-'C:/Perfmon/input'
+outdir<-'C:/Perfmon/output'
+plotdir=paste(outdir,'',sep='')
 ddplots <- list()
 
 # load functions 
@@ -94,8 +90,8 @@ KeyCounters <-
     'LogicalDisk._Total.Disk.Read.Time',    'LogicalDisk._Total.Disk.Write.Time'  )
 
 # Load Microsoft assessment and planning Toolkit data for hardware and harddisk info
-hardware <-read.table(paste(indir,MAPfiles[1],sep='\\'),sep=',',header=TRUE,stringsAsFactors = FALSE)
-harddisk <-read.table(paste(indir,MAPfiles[2],sep='\\'),sep=',',header=TRUE,stringsAsFactors = FALSE)
+hardware <-read.table(paste(indir,MAPfiles[1],sep='/'),sep=',',header=TRUE,stringsAsFactors = FALSE)
+harddisk <-read.table(paste(indir,MAPfiles[2],sep='/'),sep=',',header=TRUE,stringsAsFactors = FALSE)
 
 # Clean harddisk data. Remove duplicates 
 harddisk$DiskDrive <- strsplit(harddisk$DiskDrive, split='\n')
@@ -228,7 +224,7 @@ for (i in files)
     tbl3[nrow(tbl3)+1,] <- (tmp) 
   }
   
-  #adjust 
+  #adjust field values and wrap after x char 
   p_new <- sapply(strwrap(tbl2$Proc, width = 20, simplify = FALSE), paste, collapse = '\n')
   tbl2$Proc <- p_new
   d_new <- sapply(strwrap(tbl3$disk, width = 35, simplify = FALSE), paste, collapse = '\n')
@@ -236,36 +232,21 @@ for (i in files)
   tbl3$Name <- d2_new
   tbl3$disk <- d_new
   
-  deprecated <- rbind(deprecated,subset(SDA,grepl('Deprecated', SDA$counters)))
-  server
-  counters
-  
+  #c<-counters[1]
   for (c in counters) {
     SDC <- subset(SDA,counters==c)
     sums<-as.data.frame(unique(SDC$server[1]),stringsAsFactors = FALSE)
     colnames(sums)<-'server' 
-    #class(sums)
-    #str(sums)
     sumc<-as.data.frame(unique(SDC$counters[1]),stringsAsFactors = FALSE )
     colnames(sumc)<-'counters' 
-    #class(sumc)
-    #str(sumc)
     sumv <- data.frame(t(unclass(summary(SDC$value))))
-    #class(sumv)
-    #str(sumv)
     sum2 <-(cbind(sums,sumc,sumv))
-    #sum2
     sum[nrow(sum)+1,] <- (sum2) 
     sum0<- na.omit(sum[(sum$Min.==0|sum$Min.==0|sum$Mean==0),])
-    
   }
   
-  
-  plotdir=paste('./plots/',dir,sep='')
-  
+  # Create graphical overview Line, boxplot, summary, hardware and harddisk table
   ptm<-proc.time()
-  pdf(paste(server,'.pdf',sep=''),paper='letter')
-  
   dplots<- 
     dlply(SDF,'counters',function(a) {
       p <- ggplot( a, aes(y=value, x=time, color=category)) + geom_line() +
@@ -307,21 +288,16 @@ for (i in files)
                        , heights=(c('0.10','0.65','0.30')))
     }
     )
-  
   mld = marrangeGrob(grobs=dplots, nrow=2, ncol=1, as.table=TRUE,bottom = SDF$server[1])
   ggsave(file = file.path(plotdir, paste(SDF$server[1],'Detailed.pdf', sep = '')),width=8, height=15, mld)
-  
-  dev.off()
   print(proc.time() -ptm)
   
+  # Create list of all graphs  
+  #ddplots<-c(ddplots,dplots)
   
-  ddplots<-c(ddplots,dplots)
   
-  
-  #unique(SDF$time)
-  
+  # Create graphical view all counters 
   ptm<-proc.time()
-  
   plots <- dlply(SDA, .(counters),function(a) {
     p <-
       ggplot( a, aes(y=value, x=time, color=category)) + geom_line() +
@@ -337,18 +313,13 @@ for (i in files)
     #,legend.position = 'none'
   }
   )
-  #class (plots)
-  #str(plots)
-  #dim(plots)
-  
-  print(proc.time() -ptm)
-  #marrangeGrob(plots, nrow=5, ncol=2)
   ml = marrangeGrob(grobs=plots, nrow=4, ncol=2, as.table=TRUE,bottom = SDF$server[1])
   ggsave(file = file.path(plotdir, paste(SDF$server[1],'All.pdf', sep = '')),width=8, height=11, ml)
+  print(proc.time() -ptm)
   
   
+  # Create graphical view filtered counters 
   ptm<-proc.time()
-  
   plots <- dlply(SDF, .(counters),function(a) {
     p <-
       ggplot( a, aes(y=value, x=time, color=category)) + geom_line() +
@@ -364,18 +335,12 @@ for (i in files)
     #,legend.position = 'none'
   }
   )
-  #class (plots)
-  #str(plots)
-  #dim(plots)
-  
-  print(proc.time() -ptm)
-  #marrangeGrob(plots, nrow=5, ncol=2)
   ml = marrangeGrob(grobs=plots, nrow=4, ncol=2, as.table=TRUE,bottom = SDF$server[1])
   ggsave(file = file.path(plotdir, paste(SDF$server[1],'Overview.pdf', sep = '')),width=8, height=11, ml)
+  print(proc.time() -ptm)
   
-  
+  # Create graphical view key counters 
   ptm<-proc.time()
-  
   plots <- dlply(SDK, .(counters),function(a) {
     p <-
       ggplot( a, aes(y=value, x=time, color=category)) + geom_line() +
@@ -391,28 +356,15 @@ for (i in files)
     #,legend.position = 'none'
   }
   )
-  
-  
-  #class (plots)
-  #str(plots)
-  #dim(plots)
-  
-  print(proc.time() -ptm)
-  #marrangeGrob(plots, nrow=5, ncol=2)
   ml = marrangeGrob(grobs=plots, nrow=4, ncol=2, as.table=TRUE,bottom = SDF$server[1])
   ggsave(file = file.path(plotdir, paste(SDF$server[1],'Key.pdf', sep = '')),width=8, height=11, ml)
-  
-  ml = marrangeGrob(grobs=plots, nrow=4, ncol=2, as.table=TRUE,bottom = SDF$server[1])
-  #ggsave(file = file.path(plotdir, paste(SDF$server[1],'Overview2.pdf', sep = '')),width=8, height=11, ml)
-  plotdir='./plots/'
-  
-  ggsave(file =file.path(plotdir, paste(SDF$server[1],'Overview2.pdf', sep = '')),width=8, height=11, ml)
+  print(proc.time() -ptm)
   
 }
 
-#marrangeGrob(plots, nrow=5, ncol=2)
-ddml = marrangeGrob(grobs=ddplots, nrow=2, ncol=1, as.table=TRUE,bottom = 'Prom')
-ggsave(file = file.path(plotdir, 'Appendix2.pdf'),width=8, height=11, ddml)
+# create 
+#ddml = marrangeGrob(grobs=ddplots, nrow=2, ncol=1, as.table=TRUE,bottom = 'Prom')
+#ggsave(file = file.path(plotdir, 'Appendix2.pdf'),width=8, height=11, ddml)
 
-#write.csv(na.omit(sum), file=paste('Prom','KeyCountersSummery.csv', sep = ''), row.names = TRUE)
-#write.csv(na.omit(deprecated), file='deprecated_.csv', row.names = TRUE)
+write.csv(na.omit(sum), file=paste(plotdir,paste(SDF$server[1],'KeyCountersSummery.csv',sep=''), sep = '/'), row.names = TRUE)
+

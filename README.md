@@ -4,9 +4,9 @@ This script can be used for analysing Windows perfomance monitor files. The orgi
 
 The R script is cleaning the data and creating 5 outputs: 
 
-- Graphical view of all counters (6 a page)
-- Graphical view of filtered counters (6 a page)
-- Graphical view of key counters (6 a page)
+- Graphical view of all counters (8 a page)
+- Graphical view of filtered counters (8 a page)
+- Graphical view of key counters (8 a page)
 - Graphical overview of filtered counters (line, boxplot and summary table) (2 a page)
 - Table view of summary data by counter
 
