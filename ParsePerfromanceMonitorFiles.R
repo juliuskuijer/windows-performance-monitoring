@@ -1,5 +1,5 @@
 #
-# Purpose:  Script to read converted blg files and created graphs for the coutners collected
+# Purpose:  Script to read converted blg files and created graphs for the counters collected
 # Parameters:  None
 # Return Values:  None
 # Date		    Author							 Comment
