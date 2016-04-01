@@ -1,6 +1,9 @@
 function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   require(grid)
   
+  
+  #tesdt
+  
   # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
   
@@ -87,7 +90,7 @@ format_si <- function(...) {
                 1e6,   1e9,   1e12,  1e15,  1e18,
                 1e21,  1e24)
     prefix <- c("y",   "z",   "a",   "f",   "p",
-                "n",   "µ",   "m",   " ",   "k",
+                "n",   "?",   "m",   " ",   "k",
                 "M",   "G",   "T",   "P",   "E",
                 "Z",   "Y")
     
