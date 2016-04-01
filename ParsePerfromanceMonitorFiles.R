@@ -1,19 +1,27 @@
+#
+# Purpose:  Script to read converted blg files and created graphs for the coutners collected
+# Parameters:  None
+# Return Values:  None
+# Date		    Author							 Comment
+# 04/01/2016	Julius Kuijer        ..
+#
+
 ## Load libaries
-
-
+library(plyr)
+library(reshape2)
 library(gridExtra)
 library(ggplot2)
-library(reshape2)
-library(plyr)
+
+
 library(tidyr)
 library(stringr)
 library(scales) 
 library(grid)
 
-#update
-
 # Set dir variable 
-dir<-'Perfrom'
+indir<-'C:\\Perfmon\\input'
+outdir<-'C:\\Perfmon\\output'
+ddplots <- list()
 
 # load functions 
 source('Functions.R')
@@ -22,60 +30,36 @@ source('Functions.R')
 files<-c('Server.csv') 
 
 #Load MAP tool data 
-files2 <- c('MAP_hardware2.csv','MAP_harddisk2.csv')
-ddplots <- list()
+MAPfiles <- c('MAP_hardware2.csv','MAP_harddisk2.csv')
+
+# Define filtered counters
 FilterCounters <-
-  c(
-    'Memory.Available.Bytes',
-    'Processor._Total.Idle.Time',
-    'LogicalDisk._Total.Idle.Time',
-    'PhysicalDisk._Total.Idle.Time',
-    
+  c('Memory.Available.Bytes', 'Processor._Total.Idle.Time',
+    'LogicalDisk._Total.Idle.Time','PhysicalDisk._Total.Idle.Time',
     'Memory.Page.Faults.sec', #track the working sets and the file system. high rate of page faults combined with a high rate of page reads (show up in the Disk counters) insufficient RAM given the high rate of hard faults. 
     'Memory.Cache.Faults.sec', #track the working sets and the file system cac
     'Memory.Page.Reads.sec',   #to track hard page faults. 
-  
-    'Memory.Pages.Output.sec',
-    'Memory.Pages.sec',
-    'Memory.Pool.Paged.Bytes',
-    'Memory.Pool.Nonpaged.Bytes',
-    'Memory.Page.Writes.sec',
-    'Memory.Committed.Bytes.In.Use',
+    'Memory.Pages.Output.sec',    'Memory.Pages.sec',
+    'Memory.Pool.Paged.Bytes', 'Memory.Pool.Nonpaged.Bytes',
+    'Memory.Page.Writes.sec',    'Memory.Committed.Bytes.In.Use',
     
     'PhysicalDisk._Total.Avg.Disk.Bytes.Write',
+    'PhysicalDisk._Total.Disk.Reads.sec','PhysicalDisk._Total.Free.Space',
+    'PhysicalDisk._Total.Disk.Read.Bytes.sec','PhysicalDisk._Total.Avg.Disk.sec.Read',
+    'PhysicalDisk._Total.Disk.Writes.sec','PhysicalDisk._Total.Current.Disk.Queue.Length',
+    'PhysicalDisk._Total.Avg.Disk.sec.Write','PhysicalDisk._Total.Disk.Bytes.sec',
+    'PhysicalDisk._Total.Avg.Disk.Read.Queue.Length','PhysicalDisk._Total.Disk.Time',
+    'PhysicalDisk._Total.Avg.Disk.Queue.Length','PhysicalDisk._Total.Disk.Read.Time',
+    'PhysicalDisk._Total.Disk.Write.Bytes.sec','PhysicalDisk._Total.Disk.Write.Time',
     
-    'PhysicalDisk._Total.Disk.Reads.sec',
-    'PhysicalDisk._Total.Free.Space',
-    'PhysicalDisk._Total.Disk.Read.Bytes.sec',
-    'PhysicalDisk._Total.Avg.Disk.sec.Read',
-    'PhysicalDisk._Total.Disk.Writes.sec',
-    'PhysicalDisk._Total.Current.Disk.Queue.Length',
-    'PhysicalDisk._Total.Avg.Disk.sec.Write',
-    'PhysicalDisk._Total.Disk.Bytes.sec',
-    'PhysicalDisk._Total.Avg.Disk.Read.Queue.Length',
-    'PhysicalDisk._Total.Disk.Time',
-    'PhysicalDisk._Total.Avg.Disk.Queue.Length',
-    'PhysicalDisk._Total.Disk.Read.Time',
-    'PhysicalDisk._Total.Disk.Write.Bytes.sec',
-    'PhysicalDisk._Total.Disk.Write.Time',
-    
-    
-    'LogicalDisk._Total.Avg.Disk.Bytes.Write',
-    'LogicalDisk._Total.Idle.Time',
-    'LogicalDisk._Total.Disk.Reads.sec',
-    'LogicalDisk._Total.Free.Space',
-    'LogicalDisk._Total.Disk.Read.Bytes.sec',
-    'LogicalDisk._Total.Avg.Disk.sec.Read',
-    'LogicalDisk._Total.Disk.Writes.sec',
-    'LogicalDisk._Total.Current.Disk.Queue.Length',
-    'LogicalDisk._Total.Avg.Disk.sec.Write',
-    'LogicalDisk._Total.Disk.Bytes.sec',
-    'LogicalDisk._Total.Avg.Disk.Read.Queue.Length',
-    'LogicalDisk._Total.Disk.Time',
-    'LogicalDisk._Total.Avg.Disk.Queue.Length',
-    'LogicalDisk._Total.Disk.Read.Time',
-    'LogicalDisk._Total.Disk.Write.Bytes.sec',
-    'LogicalDisk._Total.Disk.Write.Time',
+    'LogicalDisk._Total.Avg.Disk.Bytes.Write','LogicalDisk._Total.Idle.Time',
+    'LogicalDisk._Total.Disk.Reads.sec','LogicalDisk._Total.Free.Space',
+    'LogicalDisk._Total.Disk.Read.Bytes.sec','LogicalDisk._Total.Avg.Disk.sec.Read',
+    'LogicalDisk._Total.Disk.Writes.sec','LogicalDisk._Total.Current.Disk.Queue.Length',
+    'LogicalDisk._Total.Avg.Disk.sec.Write','LogicalDisk._Total.Disk.Bytes.sec',
+    'LogicalDisk._Total.Avg.Disk.Read.Queue.Length','LogicalDisk._Total.Disk.Time',
+    'LogicalDisk._Total.Avg.Disk.Queue.Length','LogicalDisk._Total.Disk.Read.Time',
+    'LogicalDisk._Total.Disk.Write.Bytes.sec','LogicalDisk._Total.Disk.Write.Time',
     
     'Processor._Total.Interrupt.Time','Processor._Total.User.Time',
     'Processor._Total.Processor.Time','Processor._Total.Privileged.Time','Processor._Total.Interrupts.sec',
@@ -99,59 +83,46 @@ FilterCounters <-
     'SQLAgent'
   )
 
+# Define key counters
 KeyCounters <-
   c('SQLServer.General.Statistics.User.Connections',
-    'Memory.Available.Bytes',
-    'Processor._Total.Processor.Time',
-    
-    'LogicalDisk._Total.Idle.Time',
-    'PhysicalDisk._Total.Idle.Time',
-    'PhysicalDisk._Total.Disk.Reads.sec',
-    'PhysicalDisk._Total.Disk.Read.Time',
-    'Memory.Page.Faults.sec', #track the working sets and the file system. high rate of page faults combined with a high rate of page reads (show up in the Disk counters) insufficient RAM given the high rate of hard faults. 
-    'Memory.Cache.Faults.sec', #track the working sets and the file system cac
-    'Memory.Page.Reads.sec',   #to track hard page faults. 
-    'Processor._Total.User.Time',
-    'LogicalDisk._Total.Disk.Reads.sec',
-    'LogicalDisk._Total.Disk.Writes.sec',
-    'LogicalDisk._Total.Disk.Read.Time',
-    'LogicalDisk._Total.Disk.Write.Time'
-  )
+    'Memory.Available.Bytes',    'Processor._Total.Processor.Time',
+    'LogicalDisk._Total.Idle.Time',    'PhysicalDisk._Total.Idle.Time',
+    'PhysicalDisk._Total.Disk.Reads.sec',    'PhysicalDisk._Total.Disk.Read.Time',
+    'Memory.Page.Faults.sec',     'Memory.Cache.Faults.sec',    'Memory.Page.Reads.sec',  
+    'Processor._Total.User.Time',    'LogicalDisk._Total.Disk.Reads.sec',    'LogicalDisk._Total.Disk.Writes.sec',
+    'LogicalDisk._Total.Disk.Read.Time',    'LogicalDisk._Total.Disk.Write.Time'  )
 
+# Load Microsoft assessment and planning Toolkit data for hardware and harddisk info
+hardware <-read.table(paste(indir,MAPfiles[1],sep='\\'),sep=',',header=TRUE,stringsAsFactors = FALSE)
+harddisk <-read.table(paste(indir,MAPfiles[2],sep='\\'),sep=',',header=TRUE,stringsAsFactors = FALSE)
 
-hardware <-read.table(paste('C:\\Prom\\',files2[1],sep=''),sep=',',header=TRUE,stringsAsFactors = FALSE)
-harddisk <-read.table(paste('C:\\Prom\\',files2[2],sep=''),sep=',',header=TRUE,stringsAsFactors = FALSE)
-
+# Clean harddisk data. Remove duplicates 
 harddisk$DiskDrive <- strsplit(harddisk$DiskDrive, split='\n')
 harddisk$DiskDrive <- lapply(harddisk$DiskDrive,unique)
 
-aa<- c(0)
-sum<-summary(aa)
-sum<-as.data.frame(t(sapply(aa, summary) ))
+#create Sum table for collecting summary counters information 
+sum<-as.data.frame(t(sapply(c(0), summary) ))
 sum <- data.frame(counter = c(''), sum,stringsAsFactors = F)
 sum <- data.frame(server = c(''), sum,stringsAsFactors = F)
 sum$NAN <- 0
 sum = sum[-1,]
 
-deprecated <-data.frame(time=character(),variable=character(),value=integer(),
-                        server=character(),category=character(),subcategory=character(),
-                        counters=character(),stringsAsFactors=FALSE)
-deprecated$time<-as.POSIXct(deprecated$time, format='%m/%d/%Y %H:%M:%S')
+# Loop for creating graphs by server log
 
 #i=files[1]
 for (i in files)
 {
   print (paste('File is ',i))  
-  
-  SD <-read.table(paste('C:\\Prom\\',dir,'\\',i,sep=''),sep=',',header=TRUE,stringsAsFactors = FALSE)
+  SD <-read.table(paste(indir,'\\',i,sep=''),sep=',',header=TRUE,stringsAsFactors = FALSE)
   SD<- SD[, colSums(SD != 0, na.rm = TRUE) > 0]
  
-# Remove coutners not needed
+  # Remove coutners not needed
   if ( length(grep('Network.Interface',colnames(SD))) !=0) 
   {  SD <- SD[, -grep('Network.Interface', colnames(SD))]}
   
-  cname <- colnames(SD)
-  cname <- substr(cname,4,1000000L)
+  #clean column names
+  cname <- substr(colnames(SD),4,1000000L)
   cname[1] <- 'time'
   cname<-gsub('.....','.',cname, fixed=TRUE)
   cname<-gsub('....','.',cname, fixed=TRUE)
@@ -166,21 +137,19 @@ for (i in files)
     )
   counterstart<-unique(countercheck[complete.cases(countercheck)])-1
   
-  
   dot<-lapply(strsplit(cname, ''), function(x) which(x == '.'))
   while (unique(rapply(dot, function(x) head(x, 1))) <counterstart)
   {
     cname<-str_replace(cname,'\\.','-')
     dot<-lapply(strsplit(cname, ''), function(x) which(x == '.'))
   }
-  
   colnames(SD) <-cname
   SD$time<-as.POSIXct(SD$time, format='%m/%d/%Y %H:%M:%S')
   
+  # adjust cOlumn order
   colnr <- function(x) {
     which(grepl(FilterCounters[x], colnames(SD)))
   }
-  
   Colsort<- unlist(lapply(1:length(FilterCounters), colnr))
   Columnnr <- 2:length(colnames(SD))
   Columnremain <- Columnnr[!(Columnnr %in%  Colsort)]
@@ -190,10 +159,8 @@ for (i in files)
   fields[[1]] <-NULL
   server <- unique(sapply(fields,function(x) x[1]))
   category  <- unique(sapply(fields,function(x) x[2]))
-  server
   SHW<-unique(hardware[toupper(hardware$Computer.Name)==toupper(server),])
   SHD<-unique(harddisk[toupper(substr(harddisk$computername,0,regexpr('\\.',harddisk$computername)-1))==toupper(server),])
-  
   counters<-unique(substring(cname[-1],regexpr('\\.',cname[-1])+1,1000000L))
   
   Filtercol <- which(grepl(paste(FilterCounters, collapse = '|'), (colnames(SD))))
@@ -201,6 +168,7 @@ for (i in files)
   KeyFiltercol <- which(grepl(paste(KeyCounters, collapse = '|'), (colnames(SD))))
   SDK <- SD[,(c(1,KeyFiltercol))]
   
+  # Normalize data 
   SDA<-melt(data=SD,id.vars='time',stringsAsFactors = F)
   SDF<-melt(data=SDF,id.vars='time',stringsAsFactors = F)
   SDK<-melt(data=SDK,id.vars='time',stringsAsFactors = F)
@@ -208,7 +176,6 @@ for (i in files)
   outA<- str_split_fixed(SDA$variable, '\\.',5)
   outF<- str_split_fixed(SDF$variable, '\\.',5)
   outK<- str_split_fixed(SDK$variable, '\\.',5)
-  
   
   colnames(outA) <-c('server', 'category','subcategory','v1','v2')
   colnames(outF) <-c('server', 'category','subcategory','v1','v2')
@@ -233,8 +200,6 @@ for (i in files)
   SDF$v1 <- NULL
   SDF$v2 <- NULL
   
-  #head(SDF)
-  
   SDK<-cbind(SDK,CATK,deparse.level = 0 )
   SDK$subcategory <- paste(str_trim(SDK$subcategory), str_trim(SDK$v1),sep=' ')
   SDK$subcategory[SDK$category!='SQLServer'] <- NA
@@ -252,22 +217,22 @@ for (i in files)
                      SHD$FileSystem , SHD$VolumeName ,as.character(unique(SHD$DiskDrive)), SHD$Compressed, stringsAsFactors = FALSE)
   colnames(tbl3)<- c('drive','Free','%','Fsys','Name','disk','comp')
   
+  # Add row to dataframe if no records
   if ( dim(tbl2)[1] ==0)
-  {
-    tmp <- rep( '-', ncol( tbl2 ) )
+  { tmp <- rep( '-', ncol( tbl2 ) )
     tbl2[nrow(tbl2)+1,] <- (tmp) 
   }
   
   if ( dim(tbl3)[1] ==0)
-  {
-    tmp <- rep( '-', ncol( tbl3 ) )
+  { tmp <- rep( '-', ncol( tbl3 ) )
     tbl3[nrow(tbl3)+1,] <- (tmp) 
   }
   
-  p_new <- sapply(strwrap(tbl2$Proc, width = 20, simplify = FALSE), paste, collapse = '\n') # modify 30 to your needs
+  #adjust 
+  p_new <- sapply(strwrap(tbl2$Proc, width = 20, simplify = FALSE), paste, collapse = '\n')
   tbl2$Proc <- p_new
-  d_new <- sapply(strwrap(tbl3$disk, width = 35, simplify = FALSE), paste, collapse = '\n') # modify 30 to your needs
-  d2_new  <- sapply(strwrap(tbl3$Name, width = 20, simplify = FALSE), paste, collapse = '\n') # modify 30 to your needs
+  d_new <- sapply(strwrap(tbl3$disk, width = 35, simplify = FALSE), paste, collapse = '\n')
+  d2_new  <- sapply(strwrap(tbl3$Name, width = 20, simplify = FALSE), paste, collapse = '\n')
   tbl3$Name <- d2_new
   tbl3$disk <- d_new
   

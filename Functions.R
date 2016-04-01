@@ -1,3 +1,11 @@
+#
+# Purpose:  Functions library
+# Parameters:  None
+# Return Values:  None
+# Date		    Author							 Comment
+# 04/01/2016	Julius Kuijer        Original version from Ben Tupper
+#
+
 function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   require(grid)
   

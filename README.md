@@ -1,11 +1,12 @@
-# windows-performance-monitoring
+# Windows performance monitoring
 
-This project can be used for analysing perfomance monitor file and parsing various counter into readable reports. 
+This script can be used for analysing Windows perfomance monitor files. The orginal log files (.blg) were converted to .csv with the relog tool. (relog.exe "server.blg" -f csv -o "server.csv" -y)
 
-There are 3 output files:
-- All counters collected
-- Filtered counters collected
-- Key counters collected
+The R script is cleaning the data and creating 5 outputs: 
 
+- Graphical view of all counters (6 a page)
+- Graphical view of filtered counters (6 a page)
+- Graphical view of key counters (6 a page)
+- Graphical overview of filtered counters (line, boxplot and summary table) (2 a page)
+- Table view of summary data by counter
 
-Analyse performance monitoring log files (.blg)
